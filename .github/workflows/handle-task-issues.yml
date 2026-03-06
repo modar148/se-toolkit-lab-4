@@ -6,7 +6,7 @@ on:
 
 jobs:
   close-task-issue:
-    if: contains(github.event.issue.title, '[Task]')
+    if: contains(github.event.issue.title, '[Task]') && github.repository_owner == 'inno-se-toolkit'
     runs-on: ubuntu-latest
     permissions:
       issues: write
