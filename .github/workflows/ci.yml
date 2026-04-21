@@ -1,0 +1,56 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.14.2'
+
+    - name: Install uv
+      run: |
+        curl -LsSf https://astral.sh/uv/install.sh | sh
+        echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        cache-dependency-path: frontend/package-lock.json
+
+    - name: Install Python dependencies
+      run: uv sync
+
+    - name: Install frontend dependencies
+      run: cd frontend && npm ci
+
+    - name: Copy environment files
+      run: |
+        cp .env.tests.unit.example .env.tests.unit.secret
+        cp .env.tests.e2e.example .env.tests.e2e.secret
+
+    - name: Start services
+      run: docker compose --env-file .env.docker.secret up --build -d
+
+    - name: Wait for services to be ready
+      run: |
+        timeout 60 bash -c 'until docker compose --env-file .env.docker.secret ps | grep -q "healthy\|Up"; do sleep 2; done'
+
+    - name: Run tests
+      run: uv run poe test
+
+    - name: Stop services
+      run: docker compose --env-file .env.docker.secret down
