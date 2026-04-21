@@ -38,6 +38,7 @@ function App() {
   )
   const [draft, setDraft] = useState('')
   const [fetchState, dispatch] = useReducer(fetchReducer, { status: 'idle' })
+  const [typeFilter, setTypeFilter] = useState('All')
 
   useEffect(() => {
     if (!token) return
@@ -71,6 +72,18 @@ function App() {
     setDraft('')
   }
 
+  // Get unique types for the filter dropdown
+  const availableTypes = fetchState.status === 'success'
+    ? ['All', ...Array.from(new Set(fetchState.items.map(item => item.type)))]
+    : ['All']
+
+  // Filter items based on selected type
+  const filteredItems = fetchState.status === 'success'
+    ? typeFilter === 'All'
+      ? fetchState.items
+      : fetchState.items.filter(item => item.type === typeFilter)
+    : []
+
   if (!token) {
     return (
       <form className="token-form" onSubmit={handleConnect}>
@@ -100,26 +113,41 @@ function App() {
       {fetchState.status === 'error' && <p>Error: {fetchState.message}</p>}
 
       {fetchState.status === 'success' && (
-        <table>
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>ItemType</th>
-              <th>Title</th>
-              <th>Created at</th>
-            </tr>
-          </thead>
-          <tbody>
-            {fetchState.items.map((item) => (
-              <tr key={item.id}>
-                <td>{item.id}</td>
-                <td>{item.type}</td>
-                <td>{item.title}</td>
-                <td>{item.created_at}</td>
+        <>
+          <div className="filter-controls">
+            <label htmlFor="type-filter">Filter by type:</label>
+            <select
+              id="type-filter"
+              value={typeFilter}
+              onChange={(e) => setTypeFilter(e.target.value)}
+            >
+              {availableTypes.map(type => (
+                <option key={type} value={type}>{type}</option>
+              ))}
+            </select>
+          </div>
+
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>ItemType</th>
+                <th>Title</th>
+                <th>Created at</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {filteredItems.map((item) => (
+                <tr key={item.id}>
+                  <td>{item.id}</td>
+                  <td>{item.type}</td>
+                  <td>{item.title}</td>
+                  <td>{item.created_at}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </>
       )}
     </div>
   )
